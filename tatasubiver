@@ -1,0 +1,1854 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <title>TATAサバイバー</title>
+    <style>
+        * {
+            box-sizing: border-box;
+            user-select: none;
+            -webkit-user-select: none;
+            margin: 0;
+            padding: 0;
+        }
+        body, html {
+            width: 100%;
+            height: 100%;
+            overflow: hidden;
+            background-color: #0b0e14;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            color: #fff;
+        }
+        #game-container {
+            position: relative;
+            width: 100vw;
+            height: 100vh;
+        }
+        canvas {
+            display: block;
+            width: 100%;
+            height: 100%;
+            background: radial-gradient(circle at center, #1a1f2c 0%, #0a0c10 100%);
+        }
+
+        .ui-layer {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+            padding: 15px;
+        }
+
+        .hud-top {
+            width: 100%;
+            max-width: 600px;
+            margin: 0 auto;
+        }
+        .exp-bar-container {
+            width: 100%;
+            height: 16px;
+            background: rgba(0, 0, 0, 0.6);
+            border: 2px solid #334155;
+            border-radius: 8px;
+            overflow: hidden;
+            position: relative;
+        }
+        .exp-bar {
+            height: 100%;
+            width: 0%;
+            background: linear-gradient(90deg, #3b82f6, #60a5fa);
+            box-shadow: 0 0 10px #3b82f6;
+            transition: width 0.1s linear;
+        }
+        .stats-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-top: 6px;
+            font-weight: bold;
+            font-size: 16px;
+            text-shadow: 0 2px 4px rgba(0,0,0,0.8);
+        }
+        .level-badge {
+            background: #3b82f6;
+            padding: 2px 10px;
+            border-radius: 12px;
+            font-size: 14px;
+        }
+
+        .hud-slots {
+            display: flex;
+            justify-content: space-between;
+            margin-top: 8px;
+            gap: 10px;
+        }
+        .slot-group {
+            display: flex;
+            gap: 4px;
+            align-items: center;
+            background: rgba(0, 0, 0, 0.4);
+            padding: 4px 8px;
+            border-radius: 8px;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+        .slot-label {
+            font-size: 10px;
+            color: #94a3b8;
+            margin-right: 4px;
+            font-weight: bold;
+        }
+        .slot-box {
+            width: 26px;
+            height: 26px;
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px dashed #475569;
+            border-radius: 6px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 14px;
+        }
+        .slot-box.filled {
+            border: 1px solid #38bdf8;
+            background: rgba(56, 189, 248, 0.2);
+        }
+        .slot-box.fixed {
+            border: 1px solid #eab308;
+            background: rgba(234, 179, 8, 0.2);
+        }
+        .slot-box.support-filled {
+            border: 1px solid #22c55e;
+            background: rgba(34, 197, 94, 0.2);
+        }
+
+        .boss-warning {
+            position: absolute;
+            top: 20%;
+            width: 100%;
+            text-align: center;
+            font-size: 36px;
+            font-weight: 900;
+            color: #ef4444;
+            text-shadow: 0 0 20px rgba(239, 68, 68, 0.8);
+            letter-spacing: 4px;
+            animation: pulse 0.5s infinite alternate;
+            pointer-events: none;
+        }
+        @keyframes pulse {
+            0% { transform: scale(1); opacity: 0.8; }
+            100% { transform: scale(1.1); opacity: 1; }
+        }
+
+        .modal {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(11, 14, 20, 0.95);
+            backdrop-filter: blur(8px);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: flex-start;
+            padding: 20px 10px;
+            z-index: 100;
+            pointer-events: auto;
+            overflow-y: auto;
+        }
+        .hidden {
+            display: none !important;
+        }
+
+        .modal-title {
+            font-size: 28px;
+            font-weight: 900;
+            color: #fbbf24;
+            text-shadow: 0 0 15px rgba(251, 191, 36, 0.6);
+            margin-bottom: 15px;
+        }
+
+        .equip-section {
+            width: 100%;
+            max-width: 500px;
+            background: rgba(30, 41, 59, 0.6);
+            border: 1px solid #334155;
+            border-radius: 12px;
+            padding: 12px;
+            margin-bottom: 15px;
+        }
+        .equip-header {
+            font-size: 14px;
+            color: #38bdf8;
+            font-weight: bold;
+            margin-bottom: 8px;
+            display: flex;
+            justify-content: space-between;
+        }
+        .selected-weapons-bar {
+            display: flex;
+            gap: 10px;
+            justify-content: center;
+            margin-bottom: 10px;
+        }
+        .selected-slot {
+            width: 44px;
+            height: 44px;
+            border: 2px dashed #64748b;
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 22px;
+            background: rgba(0, 0, 0, 0.3);
+            cursor: pointer;
+            position: relative;
+        }
+        .selected-slot.active {
+            border: 2px solid #38bdf8;
+            background: rgba(56, 189, 248, 0.2);
+            box-shadow: 0 0 8px rgba(56, 189, 248, 0.4);
+        }
+        .selected-slot.fixed-slot {
+            border: 2px solid #eab308;
+            background: rgba(234, 179, 8, 0.2);
+            box-shadow: 0 0 8px rgba(234, 179, 8, 0.4);
+            cursor: default;
+        }
+        .lock-badge {
+            position: absolute;
+            top: -6px;
+            right: -6px;
+            font-size: 10px;
+            background: #eab308;
+            color: #000;
+            border-radius: 50%;
+            width: 16px;
+            height: 16px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: bold;
+        }
+
+        .weapon-grid {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 8px;
+            max-height: 220px;
+            overflow-y: auto;
+            padding-right: 4px;
+        }
+        .weapon-item {
+            background: #0f172a;
+            border: 1px solid #334155;
+            border-radius: 8px;
+            padding: 8px 4px;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.15s;
+        }
+        .weapon-item:hover {
+            border-color: #38bdf8;
+            transform: translateY(-2px);
+        }
+        .weapon-item.equipped {
+            border-color: #22c55e;
+            background: rgba(34, 197, 94, 0.15);
+        }
+        .weapon-item.disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+            border-color: #eab308;
+        }
+        .weapon-item .icon { font-size: 24px; }
+        .weapon-item .name { font-size: 11px; margin-top: 2px; color: #cbd5e1; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+
+        .card-container {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+            width: 90%;
+            max-width: 400px;
+        }
+
+        .skill-card {
+            background: linear-gradient(135deg, #1e293b, #0f172a);
+            border: 2px solid #38bdf8;
+            border-radius: 12px;
+            padding: 15px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 15px;
+            transition: transform 0.1s, border-color 0.1s;
+        }
+        .skill-card:hover {
+            transform: scale(1.03);
+            border-color: #f59e0b;
+        }
+        .skill-card.rare {
+            background: linear-gradient(135deg, #4c1d95, #1e1b4b);
+            border: 2px solid #a855f7;
+            box-shadow: 0 0 15px rgba(168, 85, 247, 0.4);
+        }
+
+        .btn-main {
+            background: linear-gradient(135deg, #22c55e, #16a34a);
+            color: white;
+            border: none;
+            padding: 12px 40px;
+            font-size: 20px;
+            font-weight: bold;
+            border-radius: 30px;
+            cursor: pointer;
+            box-shadow: 0 4px 15px rgba(34, 197, 94, 0.4);
+        }
+        .btn-main:disabled {
+            background: #475569;
+            box-shadow: none;
+            cursor: not-allowed;
+        }
+
+        #joystick-container {
+            position: absolute;
+            bottom: 40px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 120px;
+            height: 120px;
+            background: rgba(255, 255, 255, 0.1);
+            border: 2px solid rgba(255, 255, 255, 0.2);
+            border-radius: 50%;
+            pointer-events: auto;
+            touch-action: none;
+        }
+        #joystick-stick {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            width: 50px;
+            height: 50px;
+            margin-top: -25px;
+            margin-left: -25px;
+            background: rgba(56, 189, 248, 0.6);
+            border-radius: 50%;
+            box-shadow: 0 0 10px rgba(56, 189, 248, 0.8);
+        }
+
+        /* モード選択 */
+        .mode-select {
+            display: flex;
+            gap: 10px;
+            width: 100%;
+            max-width: 500px;
+            margin-bottom: 15px;
+        }
+
+        .mode-btn {
+            flex: 1;
+            padding: 12px 5px;
+            border: 2px solid #334155;
+            border-radius: 10px;
+            background: #0f172a;
+            color: white;
+            font-size: 14px;
+            font-weight: bold;
+            cursor: pointer;
+        }
+
+        .mode-btn.active {
+            border-color: #38bdf8;
+            background: rgba(56, 189, 248, 0.2);
+        }
+
+        /* 結果画面 */
+        .result-content {
+            width: 100%;
+            max-width: 500px;
+            background: rgba(30, 41, 59, 0.6);
+            border: 1px solid #334155;
+            border-radius: 12px;
+            padding: 15px;
+            margin-bottom: 15px;
+        }
+
+        .result-content h3 {
+            color: #38bdf8;
+            margin-bottom: 8px;
+        }
+
+        .result-content p {
+            color: #cbd5e1;
+            font-size: 15px;
+            margin: 7px 0;
+        }
+
+        .upgrade-list {
+            max-height: 220px;
+            overflow-y: auto;
+            color: #cbd5e1;
+            font-size: 13px;
+            line-height: 1.8;
+        }
+
+        .result-buttons {
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: center;
+            gap: 10px;
+            margin-bottom: 20px;
+        }
+
+        .result-buttons button {
+            padding: 11px 20px;
+            border: none;
+            border-radius: 25px;
+            font-size: 15px;
+            font-weight: bold;
+            color: white;
+            cursor: pointer;
+        }
+
+        #retry-btn {
+            background: linear-gradient(135deg, #22c55e, #16a34a);
+        }
+
+        #x-post-btn {
+            background: #111827;
+            border: 1px solid #64748b;
+        }
+
+        #end-btn {
+            background: #475569;
+        }
+    </style>
+</head>
+<body>
+    <div id="game-container">
+        <canvas id="canvas"></canvas>
+
+        <div class="ui-layer">
+            <div class="hud-top">
+                <div class="exp-bar-container">
+                    <div id="exp-bar" class="exp-bar"></div>
+                </div>
+                <div class="stats-header">
+                    <div><span class="level-badge">Lv.<span id="level-txt">1</span></span></div>
+                    <div>⏱️ <span id="timer-txt">00:00</span></div>
+                    <div>☠️ <span id="kill-txt">0</span></div>
+                </div>
+                <div class="hud-slots">
+                    <div class="slot-group">
+                        <span class="slot-label">武器</span>
+                        <div class="slot-box fixed" id="atk-slot-0">🗡️</div>
+                        <div class="slot-box" id="atk-slot-1"></div>
+                        <div class="slot-box" id="atk-slot-2"></div>
+                        <div class="slot-box" id="atk-slot-3"></div>
+                        <div class="slot-box" id="atk-slot-4"></div>
+                    </div>
+                    <div class="slot-group">
+                        <span class="slot-label">補助</span>
+                        <div class="slot-box" id="sup-slot-0"></div>
+                        <div class="slot-box" id="sup-slot-1"></div>
+                        <div class="slot-box" id="sup-slot-2"></div>
+                        <div class="slot-box" id="sup-slot-3"></div>
+                        <div class="slot-box" id="sup-slot-4"></div>
+                        <div class="slot-box" id="sup-slot-5"></div>
+                    </div>
+                </div>
+            </div>
+
+            <div id="boss-warning" class="boss-warning hidden">⚠️ WARNING: BOSS APPEARED ⚠️</div>
+
+            <div id="joystick-container">
+                <div id="joystick-stick"></div>
+            </div>
+        </div>
+
+        <div id="level-modal" class="modal hidden" style="justify-content: center;">
+            <div class="modal-title">LEVEL UP!</div>
+            <div id="cards-wrapper" class="card-container"></div>
+        </div>
+
+        <div id="start-modal" class="modal">
+            <h1 style="font-size: 26px; color: #38bdf8; text-shadow: 0 0 10px rgba(56, 189, 248, 0.5); margin-bottom: 5px;">EQUIPMENT LOADOUT</h1>
+            <p style="color: #94a3b8; font-size: 13px; margin-bottom: 10px;">メイン武器<b>「クナイ」</b>固定！残り4つのサブ武器を選択してください</p>
+
+            <div class="mode-select">
+                <button class="mode-btn active" id="normal-mode-btn">通常モード</button>
+                <button class="mode-btn" id="endless-mode-btn">エンドレスモード</button>
+            </div>
+
+            <div class="equip-section">
+                <div class="equip-header">
+                    <span>選択中武器スロット (5枠)</span>
+                    <span id="equip-count-txt">5 / 5</span>
+                </div>
+                <div class="selected-weapons-bar" id="selected-bar">
+                    <div class="selected-slot fixed-slot" data-idx="0">🗡️<div class="lock-badge">🔒</div></div>
+                    <div class="selected-slot" data-idx="1"></div>
+                    <div class="selected-slot" data-idx="2"></div>
+                    <div class="selected-slot" data-idx="3"></div>
+                    <div class="selected-slot" data-idx="4"></div>
+                </div>
+
+                <div class="equip-header" style="margin-top: 10px;">
+                    <span>サブ武器選択 (19種から4つ選択)</span>
+                </div>
+                <div class="weapon-grid" id="weapon-pool"></div>
+            </div>
+
+            <button id="start-btn" class="btn-main" disabled>ゲームスタート</button>
+        </div>
+
+        <div id="result-modal" class="modal hidden">
+            <div class="modal-title" id="result-title">RESULT</div>
+
+            <div class="result-content">
+                <h3>ゲーム結果</h3>
+                <p>⏱️ 生存時間：<span id="result-time">00:00</span></p>
+                <p>☠️ 倒した敵：<span id="result-kills">0</span>体</p>
+                <p>👑 倒したボス：<span id="result-bosses">0</span>体</p>
+            </div>
+
+            <div class="result-content">
+                <h3>アップグレード一覧</h3>
+                <div id="result-upgrades" class="upgrade-list"></div>
+            </div>
+
+            <div class="result-buttons">
+                <button id="x-post-btn">𝕏 投稿</button>
+                <button id="retry-btn">リトライ</button>
+                <button id="end-btn">終了</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const canvas = document.getElementById('canvas');
+        const ctx = canvas.getContext('2d');
+
+        function resize() {
+            canvas.width = window.innerWidth;
+            canvas.height = window.innerHeight;
+        }
+        window.addEventListener('resize', resize);
+        resize();
+
+        let gameState = 'START';
+        let gameTime = 0;
+        let kills = 0;
+        let bossKills = 0;
+        let lastTime = 0;
+        let nextBossTime = 60;
+
+        let gameMode = 'NORMAL';
+        let upgradeHistory = [];
+
+        const keys = {};
+        window.addEventListener('keydown', e => keys[e.code] = true);
+        window.addEventListener('keyup', e => keys[e.code] = false);
+
+        const joyContainer = document.getElementById('joystick-container');
+        const joyStick = document.getElementById('joystick-stick');
+        let joyVector = { x: 0, y: 0 };
+        let joyActive = false;
+
+        function handleTouch(e) {
+            if (!joyActive) return;
+            const touch = e.touches ? e.touches[0] : e;
+            const rect = joyContainer.getBoundingClientRect();
+            const centerX = rect.left + rect.width / 2;
+            const centerY = rect.top + rect.height / 2;
+
+            let dx = touch.clientX - centerX;
+            let dy = touch.clientY - centerY;
+            const dist = Math.hypot(dx, dy);
+            const maxRadius = rect.width / 2;
+
+            if (dist > maxRadius) {
+                dx = (dx / dist) * maxRadius;
+                dy = (dy / dist) * maxRadius;
+            }
+
+            joyStick.style.transform = `translate(${dx}px, ${dy}px)`;
+            joyVector = { x: dx / maxRadius, y: dy / maxRadius };
+        }
+
+        joyContainer.addEventListener('pointerdown', (e) => { joyActive = true; handleTouch(e); });
+        window.addEventListener('pointermove', (e) => { if (joyActive) handleTouch(e); });
+        window.addEventListener('pointerup', () => {
+            joyActive = false;
+            joyVector = { x: 0, y: 0 };
+            joyStick.style.transform = `translate(0px, 0px)`;
+        });
+
+        const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+        function playSound(freq, type = 'sine', duration = 0.1) {
+            try {
+                if (audioCtx.state === 'suspended') audioCtx.resume();
+                const osc = audioCtx.createOscillator();
+                const gain = audioCtx.createGain();
+                osc.type = type;
+                osc.frequency.setValueAtTime(freq, audioCtx.currentTime);
+                gain.gain.setValueAtTime(0.1, audioCtx.currentTime);
+                gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + duration);
+                osc.connect(gain);
+                gain.connect(audioCtx.destination);
+                osc.start();
+                osc.stop(audioCtx.currentTime + duration);
+            } catch(e){}
+        }
+
+        const ALL_WEAPONS = [
+            { id: 'kunai', name: 'クナイ', icon: '🗡️', desc: '最も近い敵へ高速連射クナイを発射', fixed: true },
+            { id: 'orbit', name: '回転刃', icon: '🌀', desc: '自機周囲を高速回転し接触する敵を切り刻む' },
+            { id: 'laser', name: 'ランページレーザー', icon: '⚡', desc: '周囲に属性特大攻撃' },
+            { id: 'missile', name: '誘導ミサイル', icon: '🚀', desc: '敵を追尾し着弾地点で爆発するミサイル' },
+            { id: 'grenade', name: '手榴弾', icon: '💣', desc: 'ランダムな敵の群れへ爆弾を投擲し大爆発' },
+            { id: 'fire', name: 'フレイム', icon: '🔥', desc: '近い敵に属性の範囲攻撃' },
+            { id: 'drone', name: '戦闘ドローン', icon: '🛸', desc: '周囲を飛び回りながらビームを乱射' },
+            { id: 'thunder', name: '落雷', icon: '🌩️', desc: '画面上の敵めがけて上空から落雷を直撃' },
+            { id: 'shuriken', name: '巨大手裏剣', icon: '🥷', desc: '敵を貫通しながら跳ね返る大型手裏剣' },
+            { id: 'poison', name: '毒ガス', icon: '🧪', desc: '自機の足元に継続スリップダメージの毒沼生成' },
+            { id: 'arrow', name: '連射弓', icon: '🏹', desc: '前方扇状に貫通矢を連続マルチショット' },
+            { id: 'hammer', name: 'マグマハンマー', icon: '🔨', desc: '周囲の地面を叩きつけリング状衝撃波' },
+            { id: 'boomerang', name: 'ブーメラン', icon: '🪃', desc: '前方に投げ出されて手元に戻る刃' },
+            { id: 'ice', name: '超強氷塊', icon: '❄️', desc: '1発の強力な氷塊が攻撃し移動速度を大幅低下' },
+            { id: 'meteor', name: '超強メテオ', icon: '☄️', desc: '空から巨大隕石を召喚し特大範囲爆発' },
+            { id: 'blade', name: 'クロスブレード', icon: '⚔️', desc: '斜め4方向へ十字の斬撃波を発射' },
+            { id: 'saw', name: '丸ノコ', icon: '⚙️', desc: '地面をバウンドしながら敵を粉砕するノコギリ' },
+            { id: 'whip', name: 'ヴァンパイア鞭', icon: '⚡', desc: '左右へ大きく薙ぎ払う高威力の鞭攻撃' },
+            { id: 'ring', name: 'エナジーサークル', icon: '💍', desc: 'サークル状の属性大エナジー攻撃' },
+            { id: 'nuke', name: 'ハイエナジーサークルEL', icon: '💥', desc: 'ハイエナジーサークルですべての敵を攻撃(UR)', rare: true }
+        ];
+
+        const SUPPORT_SKILLS = [
+            { id: 'speed', type: 'support', name: '移動速度アップ', icon: '👟', desc: 'プレイヤーの移動速度が上昇', lvl: 0, maxLvl: 5 },
+            { id: 'magnet', type: 'support', name: '磁石範囲アップ', icon: '🧲', desc: '遠くのXP結晶を自動吸引', lvl: 0, maxLvl: 5 },
+            { id: 'maxHp', type: 'support', name: '最大HP増強', icon: '❤️', desc: '最大体力が増加し全回復', lvl: 0, maxLvl: 5 },
+            { id: 'cooldown', type: 'support', name: '攻撃頻度アップ', icon: '⏱️', desc: '全武器の攻撃クールダウンを短縮', lvl: 0, maxLvl: 5 },
+            { id: 'armor', type: 'support', name: 'ナノバリア', icon: '🛡️', desc: '受けるダメージを軽減', lvl: 0, maxLvl: 5 },
+            { id: 'growth', type: 'support', name: '経験値ブースト', icon: '💎', desc: '獲得するXP量を増加', lvl: 0, maxLvl: 5 }
+        ];
+
+        // クナイは固定（先頭に常にセット）
+        let selectedWeaponIds = ['kunai'];
+        let activeWeaponSkills = [];
+
+        const poolEl = document.getElementById('weapon-pool');
+        ALL_WEAPONS.forEach(w => {
+            const item = document.createElement('div');
+            item.className = `weapon-item ${w.fixed ? 'disabled' : ''}`;
+            item.innerHTML = `<div class="icon">${w.icon}</div><div class="name">${w.name}</div>`;
+            item.onclick = () => {
+                if (!w.fixed) toggleWeaponSelect(w.id);
+            };
+            item.id = `w-item-${w.id}`;
+            poolEl.appendChild(item);
+        });
+
+        function toggleWeaponSelect(id) {
+            const idx = selectedWeaponIds.indexOf(id);
+            if (idx >= 0) {
+                if (id !== 'kunai') selectedWeaponIds.splice(idx, 1);
+            } else {
+                if (selectedWeaponIds.length < 5) selectedWeaponIds.push(id);
+            }
+            updateEquipUI();
+        }
+
+        function updateEquipUI() {
+            document.getElementById('equip-count-txt').innerText = `${selectedWeaponIds.length} / 5`;
+            document.getElementById('start-btn').disabled = selectedWeaponIds.length !== 5;
+
+            for (let i = 1; i < 5; i++) {
+                const slot = document.querySelector(`.selected-slot[data-idx="${i}"]`);
+                const wId = selectedWeaponIds[i];
+
+                if (wId) {
+                    const w = ALL_WEAPONS.find(item => item.id === wId);
+                    slot.innerText = w.icon;
+                    slot.classList.add('active');
+                    slot.onclick = () => toggleWeaponSelect(wId);
+                } else {
+                    slot.innerText = '';
+                    slot.classList.remove('active');
+                    slot.onclick = null;
+                }
+            }
+
+            ALL_WEAPONS.forEach(w => {
+                const item = document.getElementById(`w-item-${w.id}`);
+                if (selectedWeaponIds.includes(w.id)) item.classList.add('equipped');
+                else item.classList.remove('equipped');
+            });
+        }
+
+        updateEquipUI();
+
+        // モード選択
+        document.getElementById('normal-mode-btn').onclick = () => {
+            gameMode = 'NORMAL';
+            document.getElementById('normal-mode-btn').classList.add('active');
+            document.getElementById('endless-mode-btn').classList.remove('active');
+        };
+
+        document.getElementById('endless-mode-btn').onclick = () => {
+            gameMode = 'ENDLESS';
+            document.getElementById('endless-mode-btn').classList.add('active');
+            document.getElementById('normal-mode-btn').classList.remove('active');
+        };
+
+        let player = {
+            x: 0, y: 0, radius: 16, speed: 3.5,
+            hp: 100, maxHp: 100, level: 1,
+            exp: 0, nextExp: 10, magnetRadius: 100
+        };
+
+        let bullets = [], enemyBullets = [], enemies = [], gems = [];
+        let particles = [], shockwaves = [], hazards = [];
+        let orbitAngle = 0;
+        let lastWeaponShots = {};
+
+        function resetGame() {
+            player.x = canvas.width / 2;
+            player.y = canvas.height / 2;
+            player.hp = 100;
+            player.maxHp = 100;
+            player.level = 1;
+            player.exp = 0;
+            player.nextExp = 10;
+            player.speed = 3.5;
+            player.magnetRadius = 100;
+
+            bullets = [];
+            enemyBullets = [];
+            enemies = [];
+            gems = [];
+            particles = [];
+            shockwaves = [];
+            hazards = [];
+
+            kills = 0;
+            bossKills = 0;
+            gameTime = 0;
+            nextBossTime = 60;
+            lastWeaponShots = {};
+            upgradeHistory = [];
+
+            document.getElementById('boss-warning').classList.add('hidden');
+
+            activeWeaponSkills = selectedWeaponIds.map((id, index) => {
+                const base = ALL_WEAPONS.find(w => w.id === id);
+                return {
+                    id: base.id,
+                    type: 'attack',
+                    name: base.name,
+                    icon: base.icon,
+                    desc: base.desc,
+                    lvl: index === 0 ? 1 : 0,
+                    maxLvl: 5,
+                    rare: !!base.rare
+                };
+            });
+
+            SUPPORT_SKILLS.forEach(s => s.lvl = 0);
+
+            updateHUD();
+        }
+
+        function showLevelUpModal() {
+            gameState = 'LEVEL_UP';
+
+            const modal = document.getElementById('level-modal');
+            const wrapper = document.getElementById('cards-wrapper');
+            wrapper.innerHTML = '';
+
+            const allCurrentSkills = [...activeWeaponSkills, ...SUPPORT_SKILLS];
+            const available = allCurrentSkills.filter(s => s.lvl < s.maxLvl);
+            const choices = [];
+            const pool = [...available];
+
+            for (let i = 0; i < 3 && pool.length > 0; i++) {
+                const canGetRare = player.level >= 15;
+                const rarePool = pool.filter(s => s.rare && canGetRare);
+                const normalPool = pool.filter(s => !s.rare || !canGetRare);
+
+                let selected = null;
+
+                if (rarePool.length > 0 && Math.random() < 0.01) {
+                    selected = rarePool[Math.floor(Math.random() * rarePool.length)];
+                } else if (normalPool.length > 0) {
+                    selected = normalPool[Math.floor(Math.random() * normalPool.length)];
+                } else {
+                    selected = pool[Math.floor(Math.random() * pool.length)];
+                }
+
+                if (selected) {
+                    choices.push(selected);
+                    pool.splice(pool.indexOf(selected), 1);
+                }
+            }
+
+            if (choices.length === 0) {
+                gameState = 'PLAYING';
+                return;
+            }
+
+            choices.forEach(skill => {
+                const card = document.createElement('div');
+                card.className = `skill-card ${skill.rare ? 'rare' : ''}`;
+
+                card.innerHTML = `
+                    <div style="font-size:32px; width:44px; text-align:center;">${skill.icon}</div>
+                    <div style="flex:1;">
+                        <h4 style="font-size:16px;">${skill.name} (Lv.${skill.lvl + 1}) ${skill.rare ? '<span style="color:#c084fc; font-size:10px;">[UR 1%]</span>' : ''}</h4>
+                        <p style="font-size:12px; color:#94a3b8;">${skill.desc}</p>
+                    </div>
+                `;
+
+                card.onclick = () => {
+                    skill.lvl++;
+
+                    upgradeHistory.push({
+                        name: skill.name,
+                        icon: skill.icon,
+                        level: skill.lvl
+                    });
+
+                    playSound(skill.rare ? 900 : 600, 'triangle', 0.25);
+
+                    if (skill.id === 'speed') player.speed += 0.6;
+                    if (skill.id === 'magnet') player.magnetRadius += 40;
+
+                    if (skill.id === 'maxHp') {
+                        player.maxHp += 30;
+                        player.hp = Math.min(player.hp + 30, player.maxHp);
+                    }
+
+                    modal.classList.add('hidden');
+                    gameState = 'PLAYING';
+                };
+
+                wrapper.appendChild(card);
+            });
+
+            modal.classList.remove('hidden');
+        }
+
+        function showResult(reason) {
+            if (gameState === 'RESULT') return;
+
+            gameState = 'RESULT';
+
+            document.getElementById('level-modal').classList.add('hidden');
+            document.getElementById('start-modal').classList.add('hidden');
+            document.getElementById('boss-warning').classList.add('hidden');
+
+            document.getElementById('result-title').innerText = reason;
+
+            const m = Math.floor(gameTime / 60).toString().padStart(2, '0');
+            const s = Math.floor(gameTime % 60).toString().padStart(2, '0');
+
+            document.getElementById('result-time').innerText = `${m}:${s}`;
+            document.getElementById('result-kills').innerText = kills;
+            document.getElementById('result-bosses').innerText = bossKills;
+
+            const list = document.getElementById('result-upgrades');
+
+            if (upgradeHistory.length === 0) {
+                list.innerHTML = 'アップグレードなし';
+            } else {
+                list.innerHTML = upgradeHistory.map(item =>
+                    `<div>${item.icon} ${item.name} Lv.${item.level}</div>`
+                ).join('');
+            }
+
+            document.getElementById('result-modal').classList.remove('hidden');
+        }
+
+        function updateHUD() {
+            document.getElementById('level-txt').innerText = player.level;
+            document.getElementById('kill-txt').innerText = kills;
+
+            document.getElementById('exp-bar').style.width =
+                Math.min((player.exp / player.nextExp) * 100, 100) + '%';
+
+            const m = Math.floor(gameTime / 60).toString().padStart(2, '0');
+            const s = Math.floor(gameTime % 60).toString().padStart(2, '0');
+
+            document.getElementById('timer-txt').innerText = `${m}:${s}`;
+
+            for (let i = 0; i < 5; i++) {
+                const el = document.getElementById(`atk-slot-${i}`);
+
+                if (activeWeaponSkills[i] && activeWeaponSkills[i].lvl > 0) {
+                    el.innerText = activeWeaponSkills[i].icon;
+                    el.className = `slot-box ${i === 0 ? 'fixed' : 'filled'}`;
+                } else {
+                    el.innerText = '';
+                    el.className = 'slot-box';
+                }
+            }
+
+            for (let i = 0; i < 6; i++) {
+                const el = document.getElementById(`sup-slot-${i}`);
+
+                if (SUPPORT_SKILLS[i] && SUPPORT_SKILLS[i].lvl > 0) {
+                    el.innerText = SUPPORT_SKILLS[i].icon;
+                    el.className = 'slot-box support-filled';
+                } else {
+                    el.innerText = '';
+                    el.className = 'slot-box';
+                }
+            }
+        }
+
+        function spawnEnemy() {
+            if (enemies.length > 250) return;
+
+            const angle = Math.random() * Math.PI * 2;
+            const dist = Math.max(canvas.width, canvas.height) / 2 + 50;
+            const isHard = gameTime > 60 && Math.random() < 0.3;
+
+            enemies.push({
+                x: player.x + Math.cos(angle) * dist,
+                y: player.y + Math.sin(angle) * dist,
+                hp: isHard ? 30 : 10,
+                maxHp: isHard ? 30 : 10,
+                speed: isHard ? 1.8 : 2.2,
+                radius: isHard ? 18 : 12,
+                color: isHard ? '#ef4444' : '#a855f7',
+                xpValue: isHard ? 5 : 2,
+                isBoss: false,
+                slowTimer: 0
+            });
+        }
+
+        function spawnBoss() {
+            const angle = Math.random() * Math.PI * 2;
+            const dist = Math.max(canvas.width, canvas.height) / 2 + 50;
+
+            enemies.push({
+                x: player.x + Math.cos(angle) * dist,
+                y: player.y + Math.sin(angle) * dist,
+                hp: 1200 + (gameTime * 15),
+                maxHp: 1200 + (gameTime * 15),
+                speed: 1.2,
+                radius: 40,
+                color: '#ff0055',
+                xpValue: 150,
+                isBoss: true,
+                lastShot: Date.now(),
+                slowTimer: 0
+            });
+
+            const warning = document.getElementById('boss-warning');
+            warning.classList.remove('hidden');
+
+            playSound(100, 'sawtooth', 0.6);
+
+            setTimeout(() => warning.classList.add('hidden'), 3000);
+        }
+
+        function update(dt) {
+            if (gameState !== 'PLAYING') return;
+
+            gameTime += dt;
+
+            // 通常モードは5分で終了
+            if (gameMode === 'NORMAL' && gameTime >= 300) {
+                gameTime = 300;
+                updateHUD();
+                showResult('TIME UP!');
+                return;
+            }
+
+            updateHUD();
+
+            if (gameTime >= nextBossTime) {
+                spawnBoss();
+                nextBossTime += 60;
+            }
+
+            let dx = 0, dy = 0;
+
+            if (keys['KeyW'] || keys['ArrowUp']) dy -= 1;
+            if (keys['KeyS'] || keys['ArrowDown']) dy += 1;
+            if (keys['KeyA'] || keys['ArrowLeft']) dx -= 1;
+            if (keys['KeyD'] || keys['ArrowRight']) dx += 1;
+
+            if (joyVector.x !== 0 || joyVector.y !== 0) {
+                dx = joyVector.x;
+                dy = joyVector.y;
+            } else {
+                const len = Math.hypot(dx, dy);
+                if (len > 0) {
+                    dx /= len;
+                    dy /= len;
+                }
+            }
+
+            player.x += dx * player.speed;
+            player.y += dy * player.speed;
+
+            player.x = Math.max(player.radius, Math.min(canvas.width - player.radius, player.x));
+            player.y = Math.max(player.radius, Math.min(canvas.height - player.radius, player.y));
+
+            const cdSkill = SUPPORT_SKILLS.find(s => s.id === 'cooldown');
+            const cdMult = 1 - (cdSkill.lvl * 0.08);
+
+            activeWeaponSkills.forEach(w => {
+                if (w.lvl <= 0) return;
+
+                const last = lastWeaponShots[w.id] || 0;
+                const now = Date.now();
+
+                // 1. クナイ
+                if (w.id === 'kunai' && now - last > (400 - w.lvl * 40) * cdMult) {
+                    let nearest = null, minDist = Infinity;
+
+                    enemies.forEach(e => {
+                        const d = Math.hypot(e.x - player.x, e.y - player.y);
+                        if (d < minDist) {
+                            minDist = d;
+                            nearest = e;
+                        }
+                    });
+
+                    if (nearest) {
+                        const angle = Math.atan2(nearest.y - player.y, nearest.x - player.x);
+
+                        for (let i = 0; i < w.lvl; i++) {
+                            const spread = (i - (w.lvl - 1) / 2) * 0.15;
+
+                            bullets.push({
+                                x: player.x,
+                                y: player.y,
+                                vx: Math.cos(angle + spread) * 10,
+                                vy: Math.sin(angle + spread) * 10,
+                                radius: 5,
+                                damage: 12
+                            });
+                        }
+
+                        playSound(400, 'square', 0.05);
+                        lastWeaponShots[w.id] = now;
+                    }
+                }
+
+                // 全方位レーザー
+                else if (w.id === 'laser' && now - last > 2500 * cdMult) {
+                    const waveRadius = 90 + w.lvl * 35;
+
+                    enemies.forEach(e => {
+                        if (Math.hypot(e.x - player.x, e.y - player.y) < waveRadius) {
+                            e.hp -= 25 + w.lvl * 5;
+                        }
+                    });
+
+                    for (let i = 0; i < 24; i++) {
+                        const ang = (Math.PI * 2 / 24) * i;
+
+                        particles.push({
+                            x: player.x,
+                            y: player.y,
+                            vx: Math.cos(ang) * 7,
+                            vy: Math.sin(ang) * 7,
+                            life: 0.3,
+                            color: '#38bdf8'
+                        });
+                    }
+
+                    playSound(200, 'sawtooth', 0.15);
+                    lastWeaponShots[w.id] = now;
+                }
+
+                // 誘導ミサイル
+                else if (w.id === 'missile' && now - last > (1800 - w.lvl * 150) * cdMult) {
+                    if (enemies.length > 0) {
+                        const target = enemies[Math.floor(Math.random() * enemies.length)];
+
+                        bullets.push({
+                            x: player.x,
+                            y: player.y,
+                            target: target,
+                            vx: 0,
+                            vy: 0,
+                            speed: 6,
+                            radius: 7,
+                            damage: 35 + w.lvl * 10,
+                            isHoming: true
+                        });
+
+                        playSound(300, 'sawtooth', 0.1);
+                        lastWeaponShots[w.id] = now;
+                    }
+                }
+
+                // 手榴弾
+                else if (w.id === 'grenade' && now - last > 2200 * cdMult) {
+                    const ang = Math.random() * Math.PI * 2;
+                    const dist = 120 + Math.random() * 80;
+
+                    shockwaves.push({
+                        x: player.x + Math.cos(ang) * dist,
+                        y: player.y + Math.sin(ang) * dist,
+                        radius: 5,
+                        maxRadius: 50 + w.lvl * 15,
+                        speed: 8,
+                        damage: 50 + w.lvl * 15,
+                        color: '#f97316',
+                        hitSet: new Set()
+                    });
+
+                    playSound(150, 'square', 0.2);
+                    lastWeaponShots[w.id] = now;
+                }
+
+                // フレイム
+                else if (w.id === 'fire' && now - last > 300 * cdMult) {
+                    const ang = Math.random() * Math.PI * 2;
+
+                    for (let i = 0; i < 3; i++) {
+                        const spreadAng = ang + (i - 1) * 0.2;
+
+                        bullets.push({
+                            x: player.x,
+                            y: player.y,
+                            vx: Math.cos(spreadAng) * 4,
+                            vy: Math.sin(spreadAng) * 4,
+                            radius: 12 + w.lvl * 3,
+                            damage: 6 + w.lvl * 2,
+                            isFire: true,
+                            life: 0.8
+                        });
+                    }
+
+                    playSound(100, 'sawtooth', 0.05);
+                    lastWeaponShots[w.id] = now;
+                }
+
+                // 戦闘ドローン
+                else if (w.id === 'drone' && now - last > 800 * cdMult) {
+                    let nearest = null, minDist = Infinity;
+
+                    enemies.forEach(e => {
+                        const d = Math.hypot(e.x - player.x, e.y - player.y);
+                        if (d < minDist) {
+                            minDist = d;
+                            nearest = e;
+                        }
+                    });
+
+                    if (nearest) {
+                        const angle = Math.atan2(nearest.y - player.y, nearest.x - player.x);
+
+                        bullets.push({
+                            x: player.x + (Math.random() - 0.5) * 40,
+                            y: player.y + (Math.random() - 0.5) * 40,
+                            vx: Math.cos(angle) * 12,
+                            vy: Math.sin(angle) * 12,
+                            radius: 4,
+                            damage: 20 + w.lvl * 5
+                        });
+
+                        playSound(600, 'sine', 0.03);
+                        lastWeaponShots[w.id] = now;
+                    }
+                }
+
+                // 落雷
+                else if (w.id === 'thunder' && now - last > (2000 - w.lvl * 200) * cdMult) {
+                    if (enemies.length > 0) {
+                        const target = enemies[Math.floor(Math.random() * enemies.length)];
+
+                        shockwaves.push({
+                            x: target.x,
+                            y: target.y,
+                            radius: 2,
+                            maxRadius: 60 + w.lvl * 10,
+                            speed: 20,
+                            damage: 45 + w.lvl * 15,
+                            color: '#facc15',
+                            hitSet: new Set()
+                        });
+
+                        playSound(880, 'square', 0.1);
+                        lastWeaponShots[w.id] = now;
+                    }
+                }
+
+                // 巨大手裏剣
+                else if (w.id === 'shuriken' && now - last > 1500 * cdMult) {
+                    const ang = Math.random() * Math.PI * 2;
+
+                    bullets.push({
+                        x: player.x,
+                        y: player.y,
+                        vx: Math.cos(ang) * 5,
+                        vy: Math.sin(ang) * 5,
+                        radius: 14,
+                        damage: 40 + w.lvl * 12,
+                        isPiercing: true
+                    });
+
+                    playSound(500, 'triangle', 0.1);
+                    lastWeaponShots[w.id] = now;
+                }
+
+                // 毒ガス
+                else if (w.id === 'poison' && now - last > 1000 * cdMult) {
+                    hazards.push({
+                        x: player.x,
+                        y: player.y,
+                        radius: 50 + w.lvl * 15,
+                        damage: 5 + w.lvl * 3,
+                        life: 3.0
+                    });
+
+                    playSound(180, 'sawtooth', 0.1);
+                    lastWeaponShots[w.id] = now;
+                }
+
+                // 連射弓
+                else if (w.id === 'arrow' && now - last > (500 - w.lvl * 50) * cdMult) {
+                    for (let i = 0; i < 3 + w.lvl; i++) {
+                        const ang = (Math.PI * 2 / (3 + w.lvl)) * i + (gameTime * 2);
+
+                        bullets.push({
+                            x: player.x,
+                            y: player.y,
+                            vx: Math.cos(ang) * 8,
+                            vy: Math.sin(ang) * 8,
+                            radius: 4,
+                            damage: 15
+                        });
+                    }
+
+                    playSound(450, 'sine', 0.05);
+                    lastWeaponShots[w.id] = now;
+                }
+
+                // マグマハンマー
+                else if (w.id === 'hammer' && now - last > 2500 * cdMult) {
+                    shockwaves.push({
+                        x: player.x,
+                        y: player.y,
+                        radius: 10,
+                        maxRadius: 100 + w.lvl * 25,
+                        speed: 12,
+                        damage: 70 + w.lvl * 20,
+                        color: '#ef4444',
+                        hitSet: new Set()
+                    });
+
+                    playSound(90, 'sawtooth', 0.25);
+                    lastWeaponShots[w.id] = now;
+                }
+
+                // ブーメラン
+                else if (w.id === 'boomerang' && now - last > 1800 * cdMult) {
+                    const ang = Math.random() * Math.PI * 2;
+
+                    bullets.push({
+                        x: player.x,
+                        y: player.y,
+                        vx: Math.cos(ang) * 6,
+                        vy: Math.sin(ang) * 6,
+                        radius: 8,
+                        damage: 25 + w.lvl * 8,
+                        isBoomerang: true,
+                        timer: 0
+                    });
+
+                    playSound(350, 'sine', 0.1);
+                    lastWeaponShots[w.id] = now;
+                }
+
+                // 超強氷塊
+                else if (w.id === 'ice' && now - last > 3500 * cdMult) {
+                    const freezeRadius = 120 + w.lvl * 30;
+
+                    enemies.forEach(e => {
+                        if (Math.hypot(e.x - player.x, e.y - player.y) < freezeRadius) {
+                            e.hp -= 15 + w.lvl * 5;
+                            e.slowTimer = 3.0;
+                        }
+                    });
+
+                    shockwaves.push({
+                        x: player.x,
+                        y: player.y,
+                        radius: 10,
+                        maxRadius: freezeRadius,
+                        speed: 15,
+                        damage: 0,
+                        color: '#38bdf8',
+                        hitSet: new Set()
+                    });
+
+                    playSound(700, 'sine', 0.2);
+                    lastWeaponShots[w.id] = now;
+                }
+
+                // 超強メテオ
+                else if (w.id === 'meteor' && now - last > 3000 * cdMult) {
+                    const ang = Math.random() * Math.PI * 2;
+                    const dist = 80 + Math.random() * 100;
+
+                    shockwaves.push({
+                        x: player.x + Math.cos(ang) * dist,
+                        y: player.y + Math.sin(ang) * dist,
+                        radius: 10,
+                        maxRadius: 90 + w.lvl * 20,
+                        speed: 10,
+                        damage: 90 + w.lvl * 30,
+                        color: '#dc2626',
+                        hitSet: new Set()
+                    });
+
+                    playSound(80, 'sawtooth', 0.3);
+                    lastWeaponShots[w.id] = now;
+                }
+
+                // クロスブレード
+                else if (w.id === 'blade' && now - last > 1200 * cdMult) {
+                    for (let i = 0; i < 4; i++) {
+                        const ang = (Math.PI / 2) * i + 0.785;
+
+                        bullets.push({
+                            x: player.x,
+                            y: player.y,
+                            vx: Math.cos(ang) * 7,
+                            vy: Math.sin(ang) * 7,
+                            radius: 7,
+                            damage: 22 + w.lvl * 7
+                        });
+                    }
+
+                    playSound(550, 'square', 0.08);
+                    lastWeaponShots[w.id] = now;
+                }
+
+                // 丸ノコ
+                else if (w.id === 'saw' && now - last > 1600 * cdMult) {
+                    const ang = Math.random() * Math.PI * 2;
+
+                    bullets.push({
+                        x: player.x,
+                        y: player.y,
+                        vx: Math.cos(ang) * 4,
+                        vy: Math.sin(ang) * 4,
+                        radius: 10,
+                        damage: 30 + w.lvl * 10,
+                        isSaw: true
+                    });
+
+                    playSound(320, 'sawtooth', 0.15);
+                    lastWeaponShots[w.id] = now;
+                }
+
+                // ヴァンパイア鞭
+                else if (w.id === 'whip' && now - last > 1000 * cdMult) {
+                    shockwaves.push({
+                        x: player.x - 40,
+                        y: player.y,
+                        radius: 10,
+                        maxRadius: 50 + w.lvl * 10,
+                        speed: 18,
+                        damage: 35 + w.lvl * 12,
+                        color: '#eab308',
+                        hitSet: new Set()
+                    });
+
+                    shockwaves.push({
+                        x: player.x + 40,
+                        y: player.y,
+                        radius: 10,
+                        maxRadius: 50 + w.lvl * 10,
+                        speed: 18,
+                        damage: 35 + w.lvl * 12,
+                        color: '#eab308',
+                        hitSet: new Set()
+                    });
+
+                    playSound(480, 'triangle', 0.1);
+                    lastWeaponShots[w.id] = now;
+                }
+
+                // エナジーサークル
+                else if (w.id === 'ring' && now - last > 2000 * cdMult) {
+                    shockwaves.push({
+                        x: player.x,
+                        y: player.y,
+                        radius: 5,
+                        maxRadius: 150 + w.lvl * 30,
+                        speed: 6,
+                        damage: 40 + w.lvl * 15,
+                        color: '#06b6d4',
+                        hitSet: new Set()
+                    });
+
+                    playSound(650, 'sine', 0.2);
+                    lastWeaponShots[w.id] = now;
+                }
+
+                // ハイエナジーサークル
+                else if (w.id === 'nuke' && now - last > (6000 - w.lvl * 500) * cdMult) {
+                    shockwaves.push({
+                        x: player.x,
+                        y: player.y,
+                        radius: 10,
+                        maxRadius: Math.max(canvas.width, canvas.height) * 0.9 + (w.lvl * 50),
+                        speed: 25,
+                        damage: 100 + w.lvl * 40,
+                        color: '#c084fc',
+                        hitSet: new Set()
+                    });
+
+                    playSound(120, 'sawtooth', 0.4);
+                    lastWeaponShots[w.id] = now;
+                }
+            });
+
+            hazards.forEach((h, idx) => {
+                h.life -= dt;
+
+                enemies.forEach(e => {
+                    if (Math.hypot(e.x - h.x, e.y - h.y) < h.radius) {
+                        e.hp -= h.damage * dt;
+                    }
+                });
+
+                if (h.life <= 0) hazards.splice(idx, 1);
+            });
+
+            for (let i = shockwaves.length - 1; i >= 0; i--) {
+                const sw = shockwaves[i];
+                sw.radius += sw.speed;
+
+                enemies.forEach(e => {
+                    if (!sw.hitSet.has(e) &&
+                        Math.abs(Math.hypot(e.x - sw.x, e.y - sw.y) - sw.radius) < 30) {
+                        e.hp -= sw.damage;
+                        sw.hitSet.add(e);
+                    }
+                });
+
+                if (sw.radius >= sw.maxRadius) shockwaves.splice(i, 1);
+            }
+
+            for (let i = enemyBullets.length - 1; i >= 0; i--) {
+                const eb = enemyBullets[i];
+                eb.x += eb.vx;
+                eb.y += eb.vy;
+
+                if (Math.hypot(player.x - eb.x, player.y - eb.y) < player.radius + eb.radius) {
+                    const armorSkill = SUPPORT_SKILLS.find(s => s.id === 'armor');
+                    player.hp -= eb.damage * (1 - armorSkill.lvl * 0.1);
+                    enemyBullets.splice(i, 1);
+
+                    if (player.hp <= 0) {
+                        player.hp = 0;
+                        showResult('GAME OVER');
+                        return;
+                    }
+
+                    continue;
+                }
+
+                if (eb.x < 0 || eb.x > canvas.width || eb.y < 0 || eb.y > canvas.height) {
+                    enemyBullets.splice(i, 1);
+                }
+            }
+
+            orbitAngle += 0.04;
+
+            for (let i = bullets.length - 1; i >= 0; i--) {
+                const b = bullets[i];
+
+                if (b.isHoming && b.target) {
+                    if (enemies.includes(b.target)) {
+                        const ang = Math.atan2(b.target.y - b.y, b.target.x - b.x);
+                        b.vx = Math.cos(ang) * b.speed;
+                        b.vy = Math.sin(ang) * b.speed;
+                    }
+                }
+
+                if (b.isBoomerang) {
+                    b.timer += dt;
+
+                    if (b.timer > 0.6) {
+                        const ang = Math.atan2(player.y - b.y, player.x - b.x);
+                        b.vx = Math.cos(ang) * 8;
+                        b.vy = Math.sin(ang) * 8;
+                    }
+                }
+
+                if (b.isFire) {
+                    b.life -= dt;
+
+                    if (b.life <= 0) {
+                        bullets.splice(i, 1);
+                        continue;
+                    }
+                }
+
+                b.x += b.vx;
+                b.y += b.vy;
+
+                if (b.x < 0 || b.x > canvas.width || b.y < 0 || b.y > canvas.height) {
+                    if (!b.isFire) {
+                        bullets.splice(i, 1);
+                        continue;
+                    }
+                }
+
+                for (let j = enemies.length - 1; j >= 0; j--) {
+                    const e = enemies[j];
+
+                    if (Math.hypot(b.x - e.x, b.y - e.y) < b.radius + e.radius) {
+                        e.hp -= b.damage;
+
+                        if (!b.isPiercing && !b.isFire) {
+                            bullets.splice(i, 1);
+                            break;
+                        }
+                    }
+                }
+            }
+
+            if (Math.random() < 0.08 + (gameTime / 300)) {
+                spawnEnemy();
+            }
+
+            const orbitSkill = activeWeaponSkills.find(s => s.id === 'orbit');
+
+            for (let i = enemies.length - 1; i >= 0; i--) {
+                const e = enemies[i];
+
+                if (e.slowTimer > 0) e.slowTimer -= dt;
+
+                const currentSpeed = e.slowTimer > 0 ? e.speed * 0.4 : e.speed;
+                const angle = Math.atan2(player.y - e.y, player.x - e.x);
+
+                e.x += Math.cos(angle) * currentSpeed;
+                e.y += Math.sin(angle) * currentSpeed;
+
+                if (e.isBoss && Date.now() - e.lastShot > 1500) {
+                    for (let b = 0; b < 8; b++) {
+                        const bAng = (Math.PI * 2 / 8) * b;
+
+                        enemyBullets.push({
+                            x: e.x,
+                            y: e.y,
+                            vx: Math.cos(bAng) * 4,
+                            vy: Math.sin(bAng) * 4,
+                            radius: 6,
+                            damage: 15
+                        });
+                    }
+
+                    e.lastShot = Date.now();
+                }
+
+                if (orbitSkill && orbitSkill.lvl > 0) {
+                    for (let k = 0; k < orbitSkill.lvl; k++) {
+                        const a = orbitAngle + (Math.PI * 2 / orbitSkill.lvl) * k;
+
+                        if (Math.hypot(
+                            player.x + Math.cos(a) * 65 - e.x,
+                            player.y + Math.sin(a) * 65 - e.y
+                        ) < 14 + e.radius) {
+                            e.hp -= 1.5;
+                        }
+                    }
+                }
+
+                if (Math.hypot(player.x - e.x, player.y - e.y) < player.radius + e.radius) {
+                    const armorSkill = SUPPORT_SKILLS.find(s => s.id === 'armor');
+                    player.hp -= (e.isBoss ? 1.5 : 0.4) * (1 - armorSkill.lvl * 0.1);
+
+                    if (player.hp <= 0) {
+                        player.hp = 0;
+                        showResult('GAME OVER');
+                        return;
+                    }
+                }
+
+                if (e.hp <= 0) {
+                    kills++;
+
+                    if (e.isBoss) {
+                        bossKills++;
+                    }
+
+                    const count = e.isBoss ? 15 : 1;
+
+                    for (let g = 0; g < count; g++) {
+                        gems.push({
+                            x: e.x + (Math.random() - 0.5) * 20,
+                            y: e.y + (Math.random() - 0.5) * 20,
+                            value: e.isBoss ? 10 : e.xpValue
+                        });
+                    }
+
+                    enemies.splice(i, 1);
+                }
+            }
+
+            for (let i = gems.length - 1; i >= 0; i--) {
+                const g = gems[i];
+                const dist = Math.hypot(player.x - g.x, player.y - g.y);
+
+                if (dist < player.magnetRadius) {
+                    const ang = Math.atan2(player.y - g.y, player.x - g.x);
+                    g.x += Math.cos(ang) * 7;
+                    g.y += Math.sin(ang) * 7;
+                }
+
+                if (dist < player.radius + 8) {
+                    const growthSkill = SUPPORT_SKILLS.find(s => s.id === 'growth');
+
+                    player.exp += g.value * (1 + growthSkill.lvl * 0.15);
+
+                    gems.splice(i, 1);
+                    playSound(800, 'sine', 0.05);
+
+                    if (player.exp >= player.nextExp) {
+                        player.level++;
+                        player.exp -= player.nextExp;
+                        player.nextExp = Math.floor(player.nextExp * 1.3);
+
+                        showLevelUpModal();
+                    }
+                }
+            }
+
+            for (let i = particles.length - 1; i >= 0; i--) {
+                const p = particles[i];
+
+                p.x += p.vx;
+                p.y += p.vy;
+                p.life -= dt;
+
+                if (p.life <= 0) particles.splice(i, 1);
+            }
+        }
+
+        function render() {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+            ctx.strokeStyle = 'rgba(255, 255, 255, 0.03)';
+            ctx.lineWidth = 1;
+
+            const offsetX = player.x % 40;
+            const offsetY = player.y % 40;
+
+            for (let x = -offsetX; x < canvas.width; x += 40) {
+                ctx.beginPath();
+                ctx.moveTo(x, 0);
+                ctx.lineTo(x, canvas.height);
+                ctx.stroke();
+            }
+
+            for (let y = -offsetY; y < canvas.height; y += 40) {
+                ctx.beginPath();
+                ctx.moveTo(0, y);
+                ctx.lineTo(canvas.width, y);
+                ctx.stroke();
+            }
+
+            hazards.forEach(h => {
+                ctx.fillStyle = 'rgba(34, 197, 94, 0.25)';
+                ctx.beginPath();
+                ctx.arc(h.x, h.y, h.radius, 0, Math.PI * 2);
+                ctx.fill();
+            });
+
+            shockwaves.forEach(sw => {
+                ctx.strokeStyle = sw.color;
+                ctx.shadowColor = sw.color;
+                ctx.shadowBlur = 15;
+                ctx.lineWidth = 8;
+
+                ctx.beginPath();
+                ctx.arc(sw.x, sw.y, sw.radius, 0, Math.PI * 2);
+                ctx.stroke();
+            });
+
+            ctx.shadowBlur = 0;
+
+            gems.forEach(g => {
+                ctx.fillStyle = '#60a5fa';
+                ctx.beginPath();
+                ctx.arc(g.x, g.y, 4, 0, Math.PI * 2);
+                ctx.fill();
+            });
+
+            bullets.forEach(b => {
+                ctx.fillStyle = b.isFire ? '#f97316' : (b.isPiercing ? '#a855f7' : '#f59e0b');
+                ctx.beginPath();
+                ctx.arc(b.x, b.y, b.radius, 0, Math.PI * 2);
+                ctx.fill();
+            });
+
+            enemyBullets.forEach(eb => {
+                ctx.fillStyle = '#ff0055';
+                ctx.beginPath();
+                ctx.arc(eb.x, eb.y, eb.radius, 0, Math.PI * 2);
+                ctx.fill();
+            });
+
+            enemies.forEach(e => {
+                ctx.fillStyle = e.slowTimer > 0 ? '#38bdf8' : e.color;
+
+                if (e.isBoss) {
+                    ctx.shadowColor = '#ff0055';
+                    ctx.shadowBlur = 15;
+                }
+
+                ctx.beginPath();
+                ctx.arc(e.x, e.y, e.radius, 0, Math.PI * 2);
+                ctx.fill();
+
+                ctx.shadowBlur = 0;
+
+                if (e.isBoss) {
+                    ctx.fillStyle = 'rgba(0, 0, 0, 0.6)';
+                    ctx.fillRect(e.x - 30, e.y - e.radius - 12, 60, 8);
+
+                    ctx.fillStyle = '#ff0055';
+                    ctx.fillRect(
+                        e.x - 30,
+                        e.y - e.radius - 12,
+                        Math.max(0, (e.hp / e.maxHp) * 60),
+                        8
+                    );
+                }
+            });
+
+            const orbitSkill = activeWeaponSkills.find(s => s.id === 'orbit');
+
+            if (orbitSkill && orbitSkill.lvl > 0) {
+                ctx.fillStyle = '#38bdf8';
+                ctx.shadowColor = '#38bdf8';
+                ctx.shadowBlur = 10;
+
+                for (let k = 0; k < orbitSkill.lvl; k++) {
+                    const a = orbitAngle + (Math.PI * 2 / orbitSkill.lvl) * k;
+
+                    ctx.beginPath();
+                    ctx.arc(
+                        player.x + Math.cos(a) * 65,
+                        player.y + Math.sin(a) * 65,
+                        10,
+                        0,
+                        Math.PI * 2
+                    );
+                    ctx.fill();
+                }
+
+                ctx.shadowBlur = 0;
+            }
+
+            ctx.fillStyle = '#22c55e';
+            ctx.shadowColor = '#22c55e';
+            ctx.shadowBlur = 12;
+
+            ctx.beginPath();
+            ctx.arc(player.x, player.y, player.radius, 0, Math.PI * 2);
+            ctx.fill();
+
+            ctx.shadowBlur = 0;
+
+            ctx.fillStyle = 'rgba(0, 0, 0, 0.5)';
+            ctx.fillRect(player.x - 20, player.y - 28, 40, 6);
+
+            ctx.fillStyle = '#ef4444';
+            ctx.fillRect(
+                player.x - 20,
+                player.y - 28,
+                Math.max(0, (player.hp / player.maxHp) * 40),
+                6
+            );
+
+            particles.forEach(p => {
+                ctx.fillStyle = p.color;
+                ctx.beginPath();
+                ctx.arc(p.x, p.y, 3, 0, Math.PI * 2);
+                ctx.fill();
+            });
+        }
+
+        function loop(timestamp) {
+            if (!lastTime) lastTime = timestamp;
+
+            const dt = (timestamp - lastTime) / 1000;
+            lastTime = timestamp;
+
+            update(dt);
+            render();
+
+            requestAnimationFrame(loop);
+        }
+
+        document.getElementById('start-btn').onclick = () => {
+            if (selectedWeaponIds.length !== 5) return;
+
+            document.getElementById('start-modal').classList.add('hidden');
+            document.getElementById('result-modal').classList.add('hidden');
+
+            resetGame();
+            gameState = 'PLAYING';
+        };
+
+        // リトライ
+        document.getElementById('retry-btn').onclick = () => {
+            document.getElementById('result-modal').classList.add('hidden');
+
+            resetGame();
+            gameState = 'PLAYING';
+        };
+
+        // 終了
+        document.getElementById('end-btn').onclick = () => {
+            document.getElementById('result-modal').classList.add('hidden');
+            document.getElementById('start-modal').classList.remove('hidden');
+
+            gameState = 'START';
+        };
+
+        // X投稿
+        document.getElementById('x-post-btn').onclick = () => {
+            const m = Math.floor(gameTime / 60);
+            const s = Math.floor(gameTime % 60).toString().padStart(2, '0');
+
+            const text =
+                `TATAサバイバー\n` +
+                `${gameMode === 'NORMAL' ? '通常モード' : 'エンドレスモード'}\n` +
+                `生存時間：${m}:${s}\n` +
+                `倒した敵：${kills}体\n` +
+                `倒したボス：${bossKills}体\n` +
+                `アップグレード数：${upgradeHistory.length}\n` +
+                `#TATAサバイバー`;
+
+            window.open(
+                'https://twitter.com/intent/tweet?text=' + encodeURIComponent(text),
+                '_blank'
+            );
+        };
+
+        requestAnimationFrame(loop);
+    </script>
+</body>
+</html>
